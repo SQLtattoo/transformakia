@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Πάγος vs Φωτιάς v6</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#243d76,#060a12 70%);color:#fff;font-family:system-ui,sans-serif;text-align:center}
+.hidden{display:none!important}.screen{max-width:900px;margin:auto;padding:14px}h1{font-size:clamp(30px,8vw,54px);margin:8px 0}.big{font-size:clamp(22px,6vw,36px);font-weight:950}
+button{border:0;border-radius:22px;padding:17px;font-size:22px;font-weight:900;cursor:pointer;box-shadow:0 8px 20px #0006}.mode{display:grid;gap:14px;max-width:540px;margin:28px auto}
+.primary{background:#ff815c}.secondary{background:#67baff}.online{background:#b987ff}
+.code{font-size:70px;font-weight:1000;letter-spacing:12px;color:#ffe869;margin:18px}input{font-size:36px;width:220px;text-align:center;border:0;border-radius:18px;padding:12px}
+.arena{display:flex;gap:8px;align-items:center}.card{flex:1;background:#ffffff10;border:1px solid #ffffff22;border-radius:24px;padding:8px;transition:.25s}.bot{height:min(30vh,260px);display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.bot img{max-height:95%;max-width:92%;object-fit:contain;filter:drop-shadow(0 14px 10px #0009)}.name{font-size:25px;font-weight:950}.hpbox{height:20px;background:#111;border-radius:20px;overflow:hidden}.hp{height:100%;background:linear-gradient(90deg,#48d87c,#eef45d);transition:.4s}.vs{font-size:22px;font-weight:1000}
+.activeIce{box-shadow:0 0 0 4px #61d3ff,0 0 35px #61d3ff66}.activeFire{box-shadow:0 0 0 4px #ff815c,0 0 35px #ff815c66}
+#status{font-size:clamp(21px,6vw,32px);font-weight:1000;margin:14px 0;min-height:45px}.label{font-size:14px;opacity:.7;font-weight:900;margin:5px}
+.moves{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.moves button{min-height:88px;font-size:38px;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center}.moves small{font-size:11px}.a1{background:#ff7950}.a2{background:#65c7ff}.a3{background:#b682ff}.d1{background:#6ebcff}.d2{background:#c1d6e7}.d3{background:#ffd45b}
+#timerWrap{height:10px;background:#ffffff22;border-radius:10px;overflow:hidden;max-width:520px;margin:8px auto}.timer{height:100%;background:#ffe55b;width:100%}
+#stage{position:fixed;inset:0;z-index:40;display:none;overflow:hidden;background:radial-gradient(circle at 50% 40%,#315087,#0c1220 55%,#020407)}#stage.show{display:block}
+.ground{position:absolute;left:-15%;right:-15%;bottom:4%;height:32%;background:linear-gradient(#394d68,#101722);transform:perspective(500px) rotateX(62deg)}
+.stageBot{position:absolute;bottom:17%;width:min(39vw,280px);height:min(49vh,370px);display:flex;align-items:flex-end;justify-content:center}.stageBot img{max-width:100%;max-height:100%;filter:drop-shadow(0 20px 14px #000c)}
+#sIce{left:4%}#sFire{right:4%}.stageTitle{position:absolute;top:6%;left:0;right:0;font-size:clamp(28px,8vw,52px);font-weight:1000;text-shadow:0 5px 16px #000}.fx{position:absolute;inset:0;pointer-events:none}
+.attackIce{animation:attackIce .7s ease}.attackFire{animation:attackFire .7s ease}.shake{animation:shake .4s}.dodgeIce{animation:dodgeIce .65s}.dodgeFire{animation:dodgeFire .65s}.shieldGlow{animation:shieldGlow .8s}.counterGlow{animation:counterGlow .8s}
+.proj{position:absolute;border-radius:50%;width:85px;height:85px;opacity:0}.iceProj{background:radial-gradient(circle,#fff,#9fe7ff 30%,#44bfff 60%,#214cff);box-shadow:0 0 45px #5bd2ff}.fireProj{background:radial-gradient(circle,#fff,#ffe66b 27%,#ff6a00 60%,#9d1300);box-shadow:0 0 45px #ff6a00}
+.damage{position:absolute;top:18%;left:0;right:0;font-size:clamp(36px,11vw,74px);font-weight:1000;text-shadow:0 5px 16px #000;animation:dmg .85s forwards}
+.shieldFx{position:absolute;width:34vw;height:48vh;max-width:270px;max-height:370px;border:8px solid #9fdcff;border-radius:50%;box-shadow:0 0 45px #62cfff,inset 0 0 30px #62cfff;animation:fade .9s forwards}.counterFx{position:absolute;width:34vw;height:48vh;max-width:270px;max-height:370px;border:8px solid #ffe45e;border-radius:50%;box-shadow:0 0 45px #ffe45e,inset 0 0 30px #ffe45e;animation:fade .9s forwards}
+@keyframes attackIce{0%{transform:translateX(0)}45%{transform:translateX(43vw) scale(1.07)}100%{transform:translateX(0)}}@keyframes attackFire{0%{transform:translateX(0)}45%{transform:translateX(-43vw) scale(1.07)}100%{transform:translateX(0)}}
+@keyframes shake{20%{transform:translateX(-12px) rotate(-3deg)}45%{transform:translateX(9px) rotate(2deg)}70%{transform:translateX(-5px)}}@keyframes dodgeIce{50%{transform:translateX(-28vw) scale(.85);opacity:.5}}@keyframes dodgeFire{50%{transform:translateX(28vw) scale(.85);opacity:.5}}
+@keyframes shieldGlow{50%{filter:drop-shadow(0 0 40px #66d5ff) brightness(1.35)}}@keyframes counterGlow{50%{filter:drop-shadow(0 0 40px #ffe45e) brightness(1.4)}}@keyframes dmg{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1.25)}100%{opacity:0;transform:translateY(-28px)}}@keyframes fade{0%{opacity:0;transform:scale(.5)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}
+@media(max-width:650px){.screen{padding:8px}.bot{height:26vh}.moves{gap:5px}.moves button{min-height:80px;font-size:34px}.stageBot{width:43vw;height:42vh}.code{font-size:56px}}
+</style></head>
+<body>
+
+<div id="home" class="screen">
+<h1>❄️ ΠΑΓΟΣ vs ΦΩΤΙΑΣ 🔥</h1><div class="big">Διάλεξε παιχνίδι</div>
+<div class="mode"><button class="primary" onclick="startCPU()">🤖 1 ΠΑΙΧΤΗΣ</button><button class="secondary" onclick="startPass()">👨‍👦 2 ΠΑΙΧΤΕΣ<br><small>ίδια συσκευή</small></button><button class="online" onclick="showOnline()">📱📱 2 ΣΥΣΚΕΥΕΣ</button></div>
+</div>
+<div id="onlineMenu" class="screen hidden"><h1>📱📱 ΔΥΟ ΣΥΣΚΕΥΕΣ</h1><div class="mode"><button class="secondary" onclick="createRoom()">➕ ΔΗΜΙΟΥΡΓΙΑ ΜΑΧΗΣ</button><div><input id="roomInput" inputmode="numeric" maxlength="4" placeholder="1234"><button class="online" onclick="joinRoom()">ΜΠΕΣ</button></div><button onclick="location.reload()">⬅️</button></div></div>
+<div id="waiting" class="screen hidden"><h1>ΠΕΡΙΜΕΝΟΥΜΕ...</h1><div>Κωδικός μάχης</div><div id="roomCode" class="code">----</div><div class="big">Βάλτε τον στη δεύτερη συσκευή</div></div>
+
+<div id="game" class="screen hidden">
+<div class="arena">
+<div id="iceCard" class="card"><div class="bot"><img src="ice.png"></div><div class="name">❄️ ΠΑΓΟΣ</div><div class="hpbox"><div id="iceHP" class="hp"></div></div><div id="iceTxt" class="big">100 ❤️</div></div>
+<div class="vs">VS</div>
+<div id="fireCard" class="card"><div class="bot"><img src="fire.png"></div><div class="name">🔥 ΦΩΤΙΑΣ</div><div class="hpbox"><div id="fireHP" class="hp"></div></div><div id="fireTxt" class="big">100 ❤️</div></div>
+</div>
+<div id="status">Διάλεξε!</div><div id="timerWrap" class="hidden"><div id="timer" class="timer"></div></div>
+<div id="attackArea" class="hidden"><div class="label">⚔️ ΕΠΙΘΕΣΗ</div><div id="iceAtk" class="moves hidden"><button class="a1" onclick="attack('hammer')">🔨<small>ΣΦΥΡΙ</small></button><button class="a2" onclick="attack('iceblast')">❄️<small>ΠΑΓΩΜΕΝΗ ΒΟΛΗ</small></button><button class="a3" onclick="attack('special')">🌨️<small>ΚΑΤΑΙΓΙΔΑ</small></button></div><div id="fireAtk" class="moves hidden"><button class="a1" onclick="attack('sword')">⚔️<small>ΛΕΠΙΔΑ</small></button><button class="a2" onclick="attack('fireball')">🔥<small>ΜΠΑΛΑ ΦΩΤΙΑΣ</small></button><button class="a3" onclick="attack('special')">🌋<small>ΚΥΜΑ ΦΩΤΙΑΣ</small></button></div></div>
+<div id="defArea" class="hidden"><div class="label">🚨 ΑΜΥΝΑ ΤΩΡΑ!</div><div class="moves"><button class="d1" onclick="defend('shield')">🛡️<small>ΑΣΠΙΔΑ</small></button><button class="d2" onclick="defend('dodge')">💨<small>ΑΠΟΦΥΓΗ</small></button><button class="d3" onclick="defend('counter')">⚡<small>ΑΝΤΕΠΙΘΕΣΗ</small></button></div></div>
+<button style="margin-top:14px" onclick="restart()">🔄 ΝΕΑ ΜΑΧΗ</button>
+</div>
+
+<div id="stage"><div class="ground"></div><div id="stageTitle" class="stageTitle">⚔️ ΜΑΧΗ!</div><div id="sIce" class="stageBot"><img src="ice.png"></div><div id="sFire" class="stageBot"><img src="fire.png"></div><div id="fx" class="fx"></div></div>
+
+<script>
+const socket=io();let mode=null,role=null,state=null,timerAnim=null;
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function speak(t){if(!('speechSynthesis'in window))return;let u=new SpeechSynthesisUtterance(t);u.lang='el-GR';u.rate=.88;u.pitch=1.05;speechSynthesis.speak(u)}
+function show(id){['home','onlineMenu','waiting','game'].forEach(x=>document.getElementById(x).classList.add('hidden'));document.getElementById(id).classList.remove('hidden')}
+function showOnline(){show('onlineMenu')}
+function fresh(){return{ice:100,fire:100,turn:'ice',winner:null,phase:'choose',pending:null}}
+function startCPU(){mode='cpu';role='ice';state=fresh();show('game');render();announce()}
+function startPass(){mode='pass';state=fresh();show('game');render();announce()}
+function createRoom(){socket.emit('create-room',r=>{if(!r.ok)return;mode='online';role=r.role;roomCode.textContent=r.code;show('waiting');speak('Κωδικός '+r.code.split('').join(' '))})}
+function joinRoom(){socket.emit('join-room',{code:roomInput.value},r=>{if(!r.ok){alert('Δεν βρέθηκε η μάχη');return}mode='online';role=r.role;state=r.room.state;show('game');render();announce()})}
+socket.on('battle-ready',r=>{if(mode!=='online')return;state=r.state;show('game');render();announce()});
+socket.on('room-update',r=>{if(mode==='online'){state=r.state;render();announce()}});
+socket.on('attack-started',async p=>{if(mode!=='online')return;state=p.room.state;render();await animateAttackStart(p.attacker,p.move);render();announceDefense()});
+socket.on('attack-resolved',async p=>{if(mode!=='online')return;await animateResolution(p.result);state=p.room.state;render();announce()});
+
+function render(){
+ iceHP.style.width=state.ice+'%';fireHP.style.width=state.fire+'%';iceTxt.textContent=state.ice+' ❤️';fireTxt.textContent=state.fire+' ❤️';
+ iceCard.className='card'+(state.turn==='ice'&&!state.winner?' activeIce':'');fireCard.className='card'+(state.turn==='fire'&&!state.winner?' activeFire':'');
+ attackArea.classList.add('hidden');defArea.classList.add('hidden');iceAtk.classList.add('hidden');fireAtk.classList.add('hidden');timerWrap.classList.add('hidden');
+ if(state.winner){status.textContent=state.winner==='ice'?'❄️ Ο ΠΑΓΟΣ ΝΙΚΗΣΕ!':'🔥 Ο ΦΩΤΙΑΣ ΝΙΚΗΣΕ!';return}
+ if(state.phase==='choose'){
+   let can=mode!=='online'||role===state.turn;
+   if(can){attackArea.classList.remove('hidden');document.getElementById(state.turn+'Atk').classList.remove('hidden')}
+ } else if(state.phase==='defend'&&state.pending){
+   let defender=state.pending.defender;let can=mode!=='online'||role===defender;
+   if(can){defArea.classList.remove('hidden');timerWrap.classList.remove('hidden');startTimer()}
+ }
+}
+function announce(){
+ if(state.winner){let t=state.winner==='ice'?'Ο Πάγος νίκησε!':'Ο Φωτιάς νίκησε!';status.textContent=t;speak(t);return}
+ if(state.phase==='defend'){announceDefense();return}
+ let w=state.turn==='ice'?'Πάγος':'Φωτιάς';
+ if(mode==='online'&&role!==state.turn){status.textContent='⏳ ΠΕΡΙΜΕΝΕ...';speak('Τώρα παίζει ο '+w)}
+ else{status.textContent='👉 '+w.toUpperCase()+': ΕΠΙΘΕΣΗ!';speak(w+', σειρά σου! Κάνε επίθεση!')}
+}
+function announceDefense(){
+ if(!state.pending)return;let d=state.pending.defender==='ice'?'Πάγος':'Φωτιάς';
+ if(mode==='online'&&role!==state.pending.defender){status.textContent='⚔️ Ο ΑΛΛΟΣ ΑΜΥΝΕΤΑΙ...'}
+ else{status.textContent='🚨 '+d.toUpperCase()+': ΑΜΥΝΑ ΤΩΡΑ!';speak(d+', άμυνα τώρα!')}
+}
+function startTimer(){clearTimeout(timerAnim);timer.style.transition='none';timer.style.width='100%';requestAnimationFrame(()=>{requestAnimationFrame(()=>{timer.style.transition='width 6.2s linear';timer.style.width='0%'})})}
+function attack(move){
+ if(mode==='online'){socket.emit('attack',{move});return}
+ let attacker=state.turn,defender=attacker==='ice'?'fire':'ice';state.pending={attacker,defender,move};state.phase='defend';render();animateAttackStart(attacker,move).then(()=>announceDefense());
+ if(mode==='cpu'&&defender==='fire')setTimeout(()=>defend(['shield','dodge','counter'][Math.floor(Math.random()*3)]),1700);
+}
+function defend(move){
+ if(mode==='online'){socket.emit('defend',{move});return}
+ let result=localResolve(move);animateResolution(result).then(()=>{render();announce();if(mode==='cpu'&&!state.winner&&state.turn==='fire')setTimeout(cpuAttack,1000)});
+}
+function cpuAttack(){let moves=['sword','fireball','special'];attack(moves[Math.floor(Math.random()*moves.length)])}
+function localResolve(defMove){
+ let p=state.pending;let ranges={hammer:[18,26],iceblast:[14,21],special:p.attacker==='ice'?[27,31]:[28,31],sword:[17,24],fireball:[15,22]};
+ let rr=ranges[p.move],raw=rr[0]+Math.floor(Math.random()*(rr[1]-rr[0]+1)),dmg=raw,reduced=0,dodged=false,reflected=0;
+ if(defMove==='dodge'){let chance=p.move==='special'?.25:.58;if(Math.random()<chance){dodged=true;dmg=0}}
+ if(defMove==='shield'&&!dodged){let b=dmg;dmg=Math.max(1,Math.round(dmg*.35));reduced=b-dmg}
+ if(defMove==='counter'&&!dodged){let b=dmg;dmg=Math.max(1,Math.round(dmg*.70));reduced=b-dmg;reflected=7;state[p.attacker]=Math.max(0,state[p.attacker]-7)}
+ state[p.defender]=Math.max(0,state[p.defender]-dmg);
+ let result={attacker:p.attacker,defender:p.defender,attack:p.move,defense:defMove,rawDamage:raw,damage:dmg,reduced,dodged,reflected};
+ if(state.ice<=0)state.winner='fire';else if(state.fire<=0)state.winner='ice';
+ state.pending=null;state.phase='choose';if(!state.winner)state.turn=p.defender;return result
+}
+function attackName(role,m){let n={hammer:'Σφυρί του Πάγου!',iceblast:'Παγωμένη βολή!',sword:'Πύρινη λεπίδα!',fireball:'Μπάλα φωτιάς!'};return m==='special'?(role==='ice'?'Παγωμένη καταιγίδα!':'Κύμα φωτιάς!'):n[m]}
+function attackIcon(role,m){return{hammer:'🔨',iceblast:'❄️',sword:'⚔️',fireball:'🔥'}[m]||(role==='ice'?'🌨️':'🌋')}
+function stageShow(t){stageTitle.textContent=t;stage.classList.add('show')}function stageHide(){stage.classList.remove('show')}
+function anim(id,c,ms=750){let e=document.getElementById(id);e.classList.add(c);setTimeout(()=>e.classList.remove(c),ms)}
+function projectile(role){let e=document.createElement('div');e.className='proj '+(role==='ice'?'iceProj':'fireProj');fx.appendChild(e);e.style.opacity=1;e.animate(role==='ice'?[{left:'16%',top:'50%'},{left:'75%',top:'45%'}]:[{left:'76%',top:'50%'},{left:'18%',top:'45%'}],{duration:700,easing:'ease-in'});setTimeout(()=>e.remove(),760)}
+function dmgText(t){let d=document.createElement('div');d.className='damage';d.textContent=t;fx.appendChild(d);setTimeout(()=>d.remove(),900)}
+async function animateAttackStart(attacker,move){
+ let title=attackName(attacker,move);stageShow(title);speak(title);
+ if(move==='iceblast'||move==='fireball')projectile(attacker);else anim(attacker==='ice'?'sIce':'sFire',attacker==='ice'?'attackIce':'attackFire');
+ await wait(850);stageHide()
+}
+async function animateResolution(r){
+ stageShow((r.defense==='shield'?'🛡️ ΑΣΠΙΔΑ!':r.defense==='dodge'?'💨 ΑΠΟΦΥΓΗ!':'⚡ ΑΝΤΕΠΙΘΕΣΗ!'));
+ let did=r.defender==='ice'?'sIce':'sFire';
+ if(r.defense==='dodge'){anim(did,r.defender==='ice'?'dodgeIce':'dodgeFire');speak(r.dodged?'Το απέφυγε!':'Δεν πρόλαβε!')}
+ else if(r.defense==='shield'){anim(did,'shieldGlow');let e=document.createElement('div');e.className='shieldFx';e.style[r.defender==='ice'?'left':'right']='5%';e.style.bottom='16%';fx.appendChild(e);setTimeout(()=>e.remove(),900);speak('Ασπίδα!')}
+ else {anim(did,'counterGlow');let e=document.createElement('div');e.className='counterFx';e.style[r.defender==='ice'?'left':'right']='5%';e.style.bottom='16%';fx.appendChild(e);setTimeout(()=>e.remove(),900);speak('Αντεπίθεση!')}
+ await wait(500);
+ if(!r.dodged&&r.damage>0){anim(did,'shake',450);dmgText('−'+r.damage+' ❤️');speak('Χάνει '+r.damage+' ζωή!')}
+ if(r.reflected){await wait(350);dmgText('↩ −'+r.reflected+' ❤️');speak('Και επιστρέφει '+r.reflected+' ζημιά!')}
+ await wait(800);stageHide()
+}
+function restart(){if(mode==='online')socket.emit('restart');else{state=fresh();render();announce()}}
+</script></body></html>
